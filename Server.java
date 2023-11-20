@@ -107,7 +107,7 @@ public class Server implements Runnable {
                         } else {
                             out.println("Invalid nickname");
                         }
-                    } else if (message.startsWith("/bye")) {
+                    } else if (message.equals("bye")) {
                         broadcast(nickname + " left the chat");
                         shutdown();
                     } else

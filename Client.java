@@ -50,7 +50,7 @@ public class Client implements Runnable {
                 BufferedReader inReader = new BufferedReader(new InputStreamReader(System.in));
                 while (!done) {
                     String message = inReader.readLine();
-                    if (message.equals("/bye")) {
+                    if (message.equals("bye")) {
                         out.println(message);
                         inReader.close();
                         shutdown();
