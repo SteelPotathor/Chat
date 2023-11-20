@@ -1,9 +1,11 @@
+import javax.crypto.KeyGenerator;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.security.Key;
 import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -14,9 +16,17 @@ public class Server implements Runnable {
     private ServerSocket server;
     private boolean done;
     private ExecutorService pool;
+    private Key key;
+
     public Server() {
-        connections = new ArrayList<ConnectionHandler>();
+        connections = new ArrayList<>();
         done = false;
+        try {
+            KeyGenerator keyGen = KeyGenerator.getInstance("AES");
+            key = keyGen.generateKey();
+        } catch (Exception e) {
+            System.out.println("Error generating key");
+        }
     }
 
     public void broadcast(String message) {
@@ -44,6 +54,7 @@ public class Server implements Runnable {
             System.out.println("Error shutting down server");
         }
     }
+
     @Override
     public void run() {
         try {
@@ -86,6 +97,7 @@ public class Server implements Runnable {
                 System.out.println("Error closing connection");
             }
         }
+
         @Override
         public void run() {
             try {
@@ -113,11 +125,12 @@ public class Server implements Runnable {
                     } else
                         broadcast(nickname + ": " + message);
                 }
-            } catch(IOException e) {
+            } catch (IOException e) {
                 shutdown();
             }
         }
     }
+
     public static void main(String[] args) {
         Server server = new Server();
         server.run();
