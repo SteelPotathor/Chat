@@ -1,8 +1,8 @@
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.Socket;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.PublicKey;
 
 public class Client implements Runnable {
 
@@ -10,6 +10,7 @@ public class Client implements Runnable {
     private BufferedReader in;
     private PrintWriter out;
     private boolean done;
+    private KeyPair keyPair;
 
     public void shutdown() {
         done = true;
@@ -28,8 +29,27 @@ public class Client implements Runnable {
     public void run() {
         try {
             client = new Socket("localhost", 9999);
+            // Create a keyPair
+            keyPair = KeyPairGenerator.getInstance("RSA").generateKeyPair();
+
+            // Send public key to server
+            ObjectOutputStream objectOutputStream = new ObjectOutputStream(client.getOutputStream());
+            objectOutputStream.writeObject(keyPair.getPublic());
+            objectOutputStream.flush();
+            System.out.println(keyPair.getPublic());
+
+            // Receive public key from server
+            ObjectInputStream objectInputStream = new ObjectInputStream(client.getInputStream());
+            PublicKey serverPublicKey = (PublicKey) objectInputStream.readObject();
+
+            System.out.println(serverPublicKey);
+
+
+
             in = new BufferedReader(new InputStreamReader(client.getInputStream()));
             out = new PrintWriter(client.getOutputStream(), true);
+
+
             InputHandler inputHandler = new InputHandler();
             Thread thread = new Thread(inputHandler);
             thread.start();
@@ -37,7 +57,7 @@ public class Client implements Runnable {
             while ((inMessage = in.readLine()) != null) {
                 System.out.println(inMessage);
             }
-        } catch (IOException e) {
+        } catch (Exception e) {
             shutdown();
         }
     }
