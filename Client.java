@@ -14,7 +14,7 @@ public class Client implements Runnable {
     private BufferedReader in;
     private PrintWriter out;
     private boolean done;
-    private KeyPair keyPair;
+    private Key sessionKey;
 
     public void shutdown() {
         done = true;
@@ -34,7 +34,7 @@ public class Client implements Runnable {
         try {
             client = new Socket("localhost", 9999);
             // Create a keyPair
-            keyPair = KeyPairGenerator.getInstance("RSA").generateKeyPair();
+            KeyPair keyPair = KeyPairGenerator.getInstance("RSA").generateKeyPair();
 
             // Send public key to server
             ObjectOutputStream objectOutputStream = new ObjectOutputStream(client.getOutputStream());
@@ -56,12 +56,11 @@ public class Client implements Runnable {
             byte[] sessionKeyBytes = cipher.doFinal(encryptedSessionKey);
 
             // Transform sessionKeyBytes to a Key object
-            Key sessionKey = new SecretKeySpec(sessionKeyBytes, 0, sessionKeyBytes.length, "AES");
+            sessionKey = new SecretKeySpec(sessionKeyBytes, 0, sessionKeyBytes.length, "AES");
             System.out.println("Session key: " + sessionKey);
 
             in = new BufferedReader(new InputStreamReader(client.getInputStream()));
             out = new PrintWriter(client.getOutputStream(), true);
-
 
             InputHandler inputHandler = new InputHandler();
             Thread thread = new Thread(inputHandler);
@@ -88,10 +87,14 @@ public class Client implements Runnable {
                         inReader.close();
                         shutdown();
                     } else {
+                        Cipher cipher = Cipher.getInstance("AES");
+                        cipher.init(Cipher.ENCRYPT_MODE, sessionKey);
+                        byte[] encryptedMessage = cipher.doFinal(message.getBytes());
+                        out.println(Arrays.toString(encryptedMessage));
                         out.println(message);
                     }
                 }
-            } catch (IOException e) {
+            } catch (Exception e) {
                 shutdown();
             }
         }

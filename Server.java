@@ -18,18 +18,10 @@ public class Server implements Runnable {
     private ServerSocket server;
     private boolean done;
     private ExecutorService pool;
-    private KeyPair serverKeyPair;
 
     public Server() {
         connections = new ArrayList<>();
         done = false;
-        try {
-            // Generate RSA key pair (public/private)
-            KeyPairGenerator keyPairGen = KeyPairGenerator.getInstance("RSA");
-            serverKeyPair = keyPairGen.generateKeyPair();
-        } catch (Exception e) {
-            System.out.println("Error generating server keys");
-        }
     }
 
     public void broadcast(String message) {
@@ -63,7 +55,7 @@ public class Server implements Runnable {
         try {
             server = new ServerSocket(9999);
             // Create a keyPair
-            serverKeyPair = KeyPairGenerator.getInstance("RSA").generateKeyPair();
+            KeyPair serverKeyPair = KeyPairGenerator.getInstance("RSA").generateKeyPair();
             //System.out.println("Server public key: " + serverKeyPair.getPublic());
             pool = Executors.newCachedThreadPool();
             while (!done) {
@@ -89,7 +81,7 @@ public class Server implements Runnable {
                 objectOutputStream.writeObject(encryptedSessionKey);
                 objectOutputStream.flush();
 
-                ConnectionHandler handler = new ConnectionHandler(client);
+                ConnectionHandler handler = new ConnectionHandler(client, sessionKey);
                 connections.add(handler);
                 pool.execute(handler);
             }
@@ -100,13 +92,15 @@ public class Server implements Runnable {
 
     class ConnectionHandler implements Runnable {
 
-        private Socket client;
+        private final Socket client;
         private BufferedReader in;
         private PrintWriter out;
         private String nickname;
+        private final Key sessionKey;
 
-        public ConnectionHandler(Socket client) {
+        public ConnectionHandler(Socket client, Key sessionKey) {
             this.client = client;
+            this.sessionKey = sessionKey;
         }
 
         public void sendMessage(String message) {
@@ -128,15 +122,24 @@ public class Server implements Runnable {
         @Override
         public void run() {
             try {
-
                 out = new PrintWriter(client.getOutputStream(), true);
                 in = new BufferedReader(new InputStreamReader(client.getInputStream()));
                 out.println("Please enter a nickname: ");
                 nickname = in.readLine();
                 System.out.println(nickname + " connected");
                 broadcast(nickname + " joined the chat!");
+                Cipher cipher = Cipher.getInstance("AES");
+                cipher.init(Cipher.DECRYPT_MODE, sessionKey);
                 String message;
                 while ((message = in.readLine()) != null) {
+                    // Unencrypt the message
+
+                    /* Le cypher fait bug le programme
+                    byte[] messageBytes = cipher.doFinal(message.getBytes());
+                    String msg = new String(messageBytes);
+                    System.out.println(msg);
+                     */
+                    
                     if (message.startsWith("/nick ")) {
                         String[] messageSplit = message.split(" ", 2);
                         if (messageSplit.length == 2) {
