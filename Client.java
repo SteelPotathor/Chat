@@ -1,8 +1,12 @@
+import javax.crypto.Cipher;
+import javax.crypto.spec.SecretKeySpec;
 import java.io.*;
 import java.net.Socket;
+import java.security.Key;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.PublicKey;
+import java.util.Arrays;
 
 public class Client implements Runnable {
 
@@ -36,15 +40,24 @@ public class Client implements Runnable {
             ObjectOutputStream objectOutputStream = new ObjectOutputStream(client.getOutputStream());
             objectOutputStream.writeObject(keyPair.getPublic());
             objectOutputStream.flush();
-            System.out.println(keyPair.getPublic());
+            //System.out.println(keyPair.getPublic());
 
             // Receive public key from server
             ObjectInputStream objectInputStream = new ObjectInputStream(client.getInputStream());
             PublicKey serverPublicKey = (PublicKey) objectInputStream.readObject();
+            //System.out.println(serverPublicKey);
 
-            System.out.println(serverPublicKey);
+            // Receive the session key from the server
+            byte[] encryptedSessionKey = (byte[]) objectInputStream.readObject();
 
+            // Decrypt the session key
+            Cipher cipher = Cipher.getInstance("RSA");
+            cipher.init(Cipher.DECRYPT_MODE, keyPair.getPrivate());
+            byte[] sessionKeyBytes = cipher.doFinal(encryptedSessionKey);
 
+            // Transform sessionKeyBytes to a Key object
+            Key sessionKey = new SecretKeySpec(sessionKeyBytes, 0, sessionKeyBytes.length, "AES");
+            System.out.println("Session key: " + sessionKey);
 
             in = new BufferedReader(new InputStreamReader(client.getInputStream()));
             out = new PrintWriter(client.getOutputStream(), true);

@@ -64,7 +64,7 @@ public class Server implements Runnable {
             server = new ServerSocket(9999);
             // Create a keyPair
             serverKeyPair = KeyPairGenerator.getInstance("RSA").generateKeyPair();
-            System.out.println("Server public key: " + serverKeyPair.getPublic());
+            //System.out.println("Server public key: " + serverKeyPair.getPublic());
             pool = Executors.newCachedThreadPool();
             while (!done) {
                 Socket client = server.accept();
@@ -76,16 +76,14 @@ public class Server implements Runnable {
                 // Receive the public key from the client
                 ObjectInputStream objectInputStream = new ObjectInputStream(client.getInputStream());
                 PublicKey clientPublicKey = (PublicKey) objectInputStream.readObject();
+                //System.out.println("Client connected" + clientPublicKey);
 
-                System.out.println("Client connected" + clientPublicKey);
                 // Crypt the session key with the client's public key
                 Key sessionKey = KeyGenerator.getInstance("AES").generateKey();
+                //System.out.println("Session key: " + sessionKey);
                 Cipher cipher = Cipher.getInstance("RSA");
                 cipher.init(Cipher.ENCRYPT_MODE, clientPublicKey);
                 byte[] encryptedSessionKey = cipher.doFinal(sessionKey.getEncoded());
-
-                System.out.println("Session key: " + sessionKey);
-                System.out.println("Encrypted session key: " + Arrays.toString(encryptedSessionKey));
 
                 // Send the encrypted session key to the client
                 objectOutputStream.writeObject(encryptedSessionKey);
