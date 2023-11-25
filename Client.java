@@ -79,6 +79,7 @@ public class Client implements Runnable {
         @Override
         public void run() {
             try {
+                // Read from the console
                 BufferedReader inReader = new BufferedReader(new InputStreamReader(System.in));
                 while (!done) {
                     String message = inReader.readLine();
@@ -90,8 +91,13 @@ public class Client implements Runnable {
                         Cipher cipher = Cipher.getInstance("AES");
                         cipher.init(Cipher.ENCRYPT_MODE, sessionKey);
                         byte[] encryptedMessage = cipher.doFinal(message.getBytes());
+
+                        // crypter decrypter fonctionne bien ici cipher.init(Cipher.DECRYPT_MODE, sessionKey);
+                        //byte[] decryptedMessage = cipher.doFinal(encryptedMessage);
+                        //System.out.println("message initial crypte decrytpe"+new String(decryptedMessage));
                         out.println(Arrays.toString(encryptedMessage));
-                        out.println(message);
+                        //out.println(message);
+                        System.out.println("message initial"+Arrays.toString(encryptedMessage));
                     }
                 }
             } catch (Exception e) {

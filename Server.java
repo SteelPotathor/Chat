@@ -107,6 +107,7 @@ public class Server implements Runnable {
             out.println(message);
         }
 
+        // This method does not work properly further test must be done
         public void shutdown() {
             try {
                 in.close();
@@ -125,11 +126,22 @@ public class Server implements Runnable {
                 out = new PrintWriter(client.getOutputStream(), true);
                 in = new BufferedReader(new InputStreamReader(client.getInputStream()));
                 out.println("Please enter a nickname: ");
+
+                // Test
+                String s = in.readLine();
+                System.out.println(Arrays.toString(s.getBytes()));
+                System.out.println(s);
+                Cipher cipher = Cipher.getInstance("AES");
+                cipher.init(Cipher.DECRYPT_MODE, sessionKey);
+                byte[] messageBytes = cipher.doFinal(in.readLine().getBytes());
+                System.out.println("message initial"+Arrays.toString(messageBytes));
+                String msg = new String(messageBytes);
+                System.out.println("message decrypté"+msg);
+                // Fin du test
                 nickname = in.readLine();
                 System.out.println(nickname + " connected");
                 broadcast(nickname + " joined the chat!");
-                Cipher cipher = Cipher.getInstance("AES");
-                cipher.init(Cipher.DECRYPT_MODE, sessionKey);
+
                 String message;
                 while ((message = in.readLine()) != null) {
                     // Unencrypt the message
@@ -157,6 +169,7 @@ public class Server implements Runnable {
                         broadcast(nickname + ": " + message);
                 }
             } catch (Exception e) {
+                System.out.println(e.getMessage());
                 shutdown();
             }
         }
