@@ -13,6 +13,7 @@ public class Client implements Runnable {
     private Socket client;
     private BufferedReader in;
     private PrintWriter out;
+
     private boolean done;
     private Key sessionKey;
 
@@ -65,11 +66,15 @@ public class Client implements Runnable {
             InputHandler inputHandler = new InputHandler();
             Thread thread = new Thread(inputHandler);
             thread.start();
+
+            // Read from the server
             String inMessage;
             while ((inMessage = in.readLine()) != null) {
+                // System.out.println("Received message from server");
                 System.out.println(inMessage);
             }
         } catch (Exception e) {
+            System.out.println("Error connecting to server");
             shutdown();
         }
     }
@@ -88,19 +93,20 @@ public class Client implements Runnable {
                         inReader.close();
                         shutdown();
                     } else {
+                        // Encrypt the message with the session key
                         Cipher cipher = Cipher.getInstance("AES");
                         cipher.init(Cipher.ENCRYPT_MODE, sessionKey);
                         byte[] encryptedMessage = cipher.doFinal(message.getBytes());
-
-                        // crypter decrypter fonctionne bien ici cipher.init(Cipher.DECRYPT_MODE, sessionKey);
-                        //byte[] decryptedMessage = cipher.doFinal(encryptedMessage);
-                        //System.out.println("message initial crypte decrytpe"+new String(decryptedMessage));
                         out.println(Arrays.toString(encryptedMessage));
-                        //out.println(message);
-                        System.out.println("message initial"+Arrays.toString(encryptedMessage));
+
+                        /* Useful for debugging
+                        System.out.println(Arrays.toString(encryptedMessage));
+                        System.out.println(message);
+                        */
                     }
                 }
             } catch (Exception e) {
+                System.out.println("Error reading from console");
                 shutdown();
             }
         }

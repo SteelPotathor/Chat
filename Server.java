@@ -86,6 +86,7 @@ public class Server implements Runnable {
                 pool.execute(handler);
             }
         } catch (Exception e) {
+            System.out.println("Error running server");
             shutdown();
         }
     }
@@ -120,6 +121,21 @@ public class Server implements Runnable {
             }
         }
 
+        // Convert a String to a String array
+        public static String[] stringToStringArray(String msg) {
+            return Arrays.stream(msg.substring(1, msg.length() - 1).split(", "))
+                    .toArray(String[]::new);
+        }
+
+        // Convert a string array to a byte array (with the same values)
+        public static byte[] stringArrayToByteArray(String[] msg) {
+            byte[] messageBytes = new byte[msg.length];
+            for (int i = 0; i < msg.length; i++) {
+                messageBytes[i] = Byte.parseByte(msg[i]);
+            }
+            return messageBytes;
+        }
+
         @Override
         public void run() {
             try {
@@ -127,33 +143,30 @@ public class Server implements Runnable {
                 in = new BufferedReader(new InputStreamReader(client.getInputStream()));
                 out.println("Please enter a nickname: ");
 
-                // Test
                 String s = in.readLine();
-                System.out.println(Arrays.toString(s.getBytes()));
-                System.out.println(s);
+                // Transform the string to a string array
+                String[] msg = stringToStringArray(s);
+
+                // Transform the string array to a byte array
+                byte[] messageBytes = stringArrayToByteArray(msg);
+
+                // Decrypt the message
                 Cipher cipher = Cipher.getInstance("AES");
                 cipher.init(Cipher.DECRYPT_MODE, sessionKey);
-                byte[] messageBytes = cipher.doFinal(in.readLine().getBytes());
-                System.out.println("message initial"+Arrays.toString(messageBytes));
-                String msg = new String(messageBytes);
-                System.out.println("message decrypté"+msg);
-                // Fin du test
-                nickname = in.readLine();
+                nickname = new String(cipher.doFinal(messageBytes));
                 System.out.println(nickname + " connected");
                 broadcast(nickname + " joined the chat!");
-
                 String message;
                 while ((message = in.readLine()) != null) {
-                    // Unencrypt the message
+                    // Decrypt the message
+                    String clearMessage = new String(cipher.doFinal(stringArrayToByteArray(stringToStringArray(message))));
 
-                    /* Le cypher fait bug le programme
-                    byte[] messageBytes = cipher.doFinal(message.getBytes());
-                    String msg = new String(messageBytes);
-                    System.out.println(msg);
-                     */
-                    
-                    if (message.startsWith("/nick ")) {
-                        String[] messageSplit = message.split(" ", 2);
+                    // Console of the server
+                    System.out.println(nickname + ": " + message);
+                    System.out.println(nickname + ": " + clearMessage);
+
+                    if (clearMessage.startsWith("/nick ")) {
+                        String[] messageSplit = clearMessage.split(" ", 2);
                         if (messageSplit.length == 2) {
                             broadcast(nickname + " changed their nickname to " + messageSplit[1]);
                             System.out.println(nickname + " changed their nickname to " + messageSplit[1]);
@@ -162,14 +175,15 @@ public class Server implements Runnable {
                         } else {
                             out.println("Invalid nickname");
                         }
-                    } else if (message.equals("bye")) {
+                    } else if (clearMessage.equals("bye")) {
                         broadcast(nickname + " left the chat");
                         shutdown();
-                    } else
-                        broadcast(nickname + ": " + message);
+                    } else {
+                        broadcast(nickname + ": " + clearMessage);
+                    }
                 }
             } catch (Exception e) {
-                System.out.println(e.getMessage());
+                System.out.println("Error handling client");
                 shutdown();
             }
         }
