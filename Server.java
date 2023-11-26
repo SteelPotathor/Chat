@@ -105,7 +105,17 @@ public class Server implements Runnable {
         }
 
         public void sendMessage(String message) {
-            out.println(message);
+            // Encrypt the message
+            try {
+                Cipher cipher = Cipher.getInstance("AES");
+                cipher.init(Cipher.ENCRYPT_MODE, sessionKey);
+                byte[] encryptedMessage = cipher.doFinal(message.getBytes());
+                // Send the message
+                out.println(Arrays.toString(encryptedMessage));
+                // System.out.println(Arrays.toString(encryptedMessage));
+            } catch (Exception e) {
+                System.out.println("Error encrypting message");
+            }
         }
 
         // This method does not work properly further test must be done
@@ -141,7 +151,8 @@ public class Server implements Runnable {
             try {
                 out = new PrintWriter(client.getOutputStream(), true);
                 in = new BufferedReader(new InputStreamReader(client.getInputStream()));
-                out.println("Please enter a nickname: ");
+                sendMessage("Please enter a nickname: ");
+                //out.println("Please enter a nickname: ");
 
                 String s = in.readLine();
                 // Transform the string to a string array

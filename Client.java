@@ -30,6 +30,21 @@ public class Client implements Runnable {
         }
     }
 
+    // Convert a String to a String array
+    public static String[] stringToStringArray(String msg) {
+        return Arrays.stream(msg.substring(1, msg.length() - 1).split(", "))
+                .toArray(String[]::new);
+    }
+
+    // Convert a string array to a byte array (with the same values)
+    public static byte[] stringArrayToByteArray(String[] msg) {
+        byte[] messageBytes = new byte[msg.length];
+        for (int i = 0; i < msg.length; i++) {
+            messageBytes[i] = Byte.parseByte(msg[i]);
+        }
+        return messageBytes;
+    }
+
     @Override
     public void run() {
         try {
@@ -52,9 +67,9 @@ public class Client implements Runnable {
             byte[] encryptedSessionKey = (byte[]) objectInputStream.readObject();
 
             // Decrypt the session key
-            Cipher cipher = Cipher.getInstance("RSA");
-            cipher.init(Cipher.DECRYPT_MODE, keyPair.getPrivate());
-            byte[] sessionKeyBytes = cipher.doFinal(encryptedSessionKey);
+            Cipher cipherRSA = Cipher.getInstance("RSA");
+            cipherRSA.init(Cipher.DECRYPT_MODE, keyPair.getPrivate());
+            byte[] sessionKeyBytes = cipherRSA.doFinal(encryptedSessionKey);
 
             // Transform sessionKeyBytes to a Key object
             sessionKey = new SecretKeySpec(sessionKeyBytes, 0, sessionKeyBytes.length, "AES");
@@ -71,9 +86,14 @@ public class Client implements Runnable {
             String inMessage;
             while ((inMessage = in.readLine()) != null) {
                 // System.out.println("Received message from server");
-                System.out.println(inMessage);
+                // Decrypt the message with the session key
+                Cipher cipherAES = Cipher.getInstance("AES");
+                cipherAES.init(Cipher.DECRYPT_MODE, sessionKey);
+                System.out.println("Message crypté: " + inMessage);
+                System.out.println("Message décrypté: " + new String(cipherAES.doFinal(stringArrayToByteArray(stringToStringArray(inMessage)))));
             }
         } catch (Exception e) {
+            System.out.println(e.getMessage());
             System.out.println("Error connecting to server");
             shutdown();
         }
