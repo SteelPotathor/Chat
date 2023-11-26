@@ -14,7 +14,7 @@ import java.util.concurrent.Executors;
 
 public class Server implements Runnable {
 
-    private ArrayList<ConnectionHandler> connections;
+    private final ArrayList<ConnectionHandler> connections;
     private ServerSocket server;
     private boolean done;
     private ExecutorService pool;
@@ -96,12 +96,18 @@ public class Server implements Runnable {
         private final Socket client;
         private BufferedReader in;
         private PrintWriter out;
-        private String nickname;
         private final Key sessionKey;
+        private Cipher cipher;
 
         public ConnectionHandler(Socket client, Key sessionKey) {
             this.client = client;
             this.sessionKey = sessionKey;
+            try {
+                cipher = Cipher.getInstance("AES");
+                cipher.init(Cipher.DECRYPT_MODE, sessionKey);
+            } catch (Exception e) {
+                System.out.println("Error creating cipher");
+            }
         }
 
         public void sendMessage(String message) {
@@ -132,18 +138,28 @@ public class Server implements Runnable {
         }
 
         // Convert a String to a String array
-        public static String[] stringToStringArray(String msg) {
+        public String[] stringToStringArray(String msg) {
             return Arrays.stream(msg.substring(1, msg.length() - 1).split(", "))
                     .toArray(String[]::new);
         }
 
         // Convert a string array to a byte array (with the same values)
-        public static byte[] stringArrayToByteArray(String[] msg) {
+        public byte[] stringArrayToByteArray(String[] msg) {
             byte[] messageBytes = new byte[msg.length];
             for (int i = 0; i < msg.length; i++) {
                 messageBytes[i] = Byte.parseByte(msg[i]);
             }
             return messageBytes;
+        }
+
+        public String decryptMessage(String message) {
+            try {
+                // Decrypt the message
+                return new String(cipher.doFinal(stringArrayToByteArray(stringToStringArray(message))));
+            } catch (Exception e) {
+                System.out.println("Error decrypting message");
+                return null;
+            }
         }
 
         @Override
@@ -152,25 +168,14 @@ public class Server implements Runnable {
                 out = new PrintWriter(client.getOutputStream(), true);
                 in = new BufferedReader(new InputStreamReader(client.getInputStream()));
                 sendMessage("Please enter a nickname: ");
-                //out.println("Please enter a nickname: ");
 
-                String s = in.readLine();
-                // Transform the string to a string array
-                String[] msg = stringToStringArray(s);
-
-                // Transform the string array to a byte array
-                byte[] messageBytes = stringArrayToByteArray(msg);
-
-                // Decrypt the message
-                Cipher cipher = Cipher.getInstance("AES");
-                cipher.init(Cipher.DECRYPT_MODE, sessionKey);
-                nickname = new String(cipher.doFinal(messageBytes));
+                String nickname = decryptMessage(in.readLine());
                 System.out.println(nickname + " connected");
                 broadcast(nickname + " joined the chat!");
                 String message;
                 while ((message = in.readLine()) != null) {
                     // Decrypt the message
-                    String clearMessage = new String(cipher.doFinal(stringArrayToByteArray(stringToStringArray(message))));
+                    String clearMessage = decryptMessage(message);
 
                     // Console of the server
                     System.out.println(nickname + ": " + message);
@@ -182,18 +187,19 @@ public class Server implements Runnable {
                             broadcast(nickname + " changed their nickname to " + messageSplit[1]);
                             System.out.println(nickname + " changed their nickname to " + messageSplit[1]);
                             nickname = messageSplit[1];
-                            out.println("Nickname changed to " + nickname);
+                            sendMessage("Nickname changed to " + nickname);
                         } else {
-                            out.println("Invalid nickname");
+                            sendMessage("Invalid nickname");
                         }
                     } else if (clearMessage.equals("bye")) {
                         broadcast(nickname + " left the chat");
-                        shutdown();
+                        //shutdown(); this method does not work properly
                     } else {
                         broadcast(nickname + ": " + clearMessage);
                     }
                 }
             } catch (Exception e) {
+                System.out.println(e.getMessage());
                 System.out.println("Error handling client");
                 shutdown();
             }
