@@ -46,6 +46,7 @@ public class Server implements Runnable {
                 }
             }
         } catch (IOException e) {
+            // System.out.println(e.getMessage());
             System.out.println("Error shutting down server");
         }
     }
@@ -86,6 +87,7 @@ public class Server implements Runnable {
                 pool.execute(handler);
             }
         } catch (Exception e) {
+            // System.out.println(e.getMessage());
             System.out.println("Error running server");
             shutdown();
         }
@@ -106,7 +108,9 @@ public class Server implements Runnable {
                 cipher = Cipher.getInstance("AES");
                 cipher.init(Cipher.DECRYPT_MODE, sessionKey);
             } catch (Exception e) {
+                // System.out.println(e.getMessage());
                 System.out.println("Error creating cipher");
+                shutdown();
             }
         }
 
@@ -133,6 +137,7 @@ public class Server implements Runnable {
                     client.close();
                 }
             } catch (IOException e) {
+                // System.out.println(e.getMessage());
                 System.out.println("Error closing connection");
             }
         }
@@ -184,23 +189,29 @@ public class Server implements Runnable {
                     if (clearMessage.startsWith("/nick ")) {
                         String[] messageSplit = clearMessage.split(" ", 2);
                         if (messageSplit.length == 2) {
-                            broadcast(nickname + " changed their nickname to " + messageSplit[1]);
-                            System.out.println(nickname + " changed their nickname to " + messageSplit[1]);
                             nickname = messageSplit[1];
+                            broadcast(nickname + " changed their nickname to " + nickname);
+                            System.out.println(nickname + " changed their nickname to " + nickname);
                             sendMessage("Nickname changed to " + nickname);
                         } else {
                             sendMessage("Invalid nickname");
                         }
                     } else if (clearMessage.equals("bye")) {
+                        shutdown();
                         broadcast(nickname + " left the chat");
-                        //shutdown(); this method does not work properly
+                        System.out.println(nickname + " left the chat");
                     } else {
                         broadcast(nickname + ": " + clearMessage);
                     }
                 }
             } catch (Exception e) {
-                System.out.println(e.getMessage());
-                System.out.println("Error handling client");
+                if (e.getMessage().equals("Stream closed")) {
+                    // Ignore
+                    // System.out.println("Client disconnected");
+                } else {
+                    // System.out.println(e.getMessage());
+                    System.out.println("Error running connection handler");
+                }
                 shutdown();
             }
         }

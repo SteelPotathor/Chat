@@ -21,13 +21,13 @@ public class Client implements Runnable {
     public void shutdown() {
         done = true;
         try {
-            System.out.println("petit test");
             in.close();
             out.close();
             if (!client.isClosed()) {
                 client.close();
             }
         } catch (IOException e) {
+            // System.out.println(e.getMessage());
             System.out.println("Error shutting down client");
         }
     }
@@ -90,12 +90,14 @@ public class Client implements Runnable {
                 // Decrypt the message with the session key
                 Cipher cipherAES = Cipher.getInstance("AES");
                 cipherAES.init(Cipher.DECRYPT_MODE, sessionKey);
+
+                // Print in the console
                 System.out.println("Message crypté: " + inMessage);
                 System.out.println("Message décrypté: " + new String(cipherAES.doFinal(stringArrayToByteArray(stringToStringArray(inMessage)))));
             }
         } catch (Exception e) {
-            System.out.println(e.getMessage());
-            System.out.println("Error connecting to server");
+            // System.out.println(e.getMessage());
+            System.out.println("Error running client");
             shutdown();
         }
     }
@@ -113,6 +115,7 @@ public class Client implements Runnable {
                 shutdown();
             }
         }
+
         public void sendMessage(String message) {
             try {
                 // Encrypt the message with the session key
@@ -120,7 +123,7 @@ public class Client implements Runnable {
                 // Send the message
                 out.println(Arrays.toString(encryptedMessage));
             } catch (Exception e) {
-                System.out.println(e.getMessage());
+                // System.out.println(e.getMessage());
                 System.out.println("Error sending message");
                 shutdown();
             }
@@ -136,7 +139,7 @@ public class Client implements Runnable {
                     String message = inReader.readLine();
                     if (message.equals("bye")) {
                         sendMessage(message);
-                        //inReader.close();
+                        inReader.close();
                         shutdown();
                     } else {
                         // Encrypt the message with the session key
@@ -149,6 +152,7 @@ public class Client implements Runnable {
                     }
                 }
             } catch (Exception e) {
+                // System.out.println(e.getMessage());
                 System.out.println("Error reading from console");
                 shutdown();
             }
