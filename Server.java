@@ -100,6 +100,7 @@ public class Server implements Runnable {
         private PrintWriter out;
         private final Key sessionKey;
         private Cipher cipher;
+        private String nickname;
 
         public ConnectionHandler(Socket client, Key sessionKey) {
             this.client = client;
@@ -142,6 +143,15 @@ public class Server implements Runnable {
             }
         }
 
+        // Convert a string array to a string
+        private String stringArrayToString(String[] msg, int start, int end) {
+            StringBuilder message = new StringBuilder();
+            for (int i = start; i < end; i++) {
+                message.append(msg[i]);
+            }
+            return message.toString();
+        }
+
         // Convert a String to a String array
         public String[] stringToStringArray(String msg) {
             return Arrays.stream(msg.substring(1, msg.length() - 1).split(", "))
@@ -174,7 +184,7 @@ public class Server implements Runnable {
                 in = new BufferedReader(new InputStreamReader(client.getInputStream()));
                 sendMessage("Please enter a nickname: ");
 
-                String nickname = decryptMessage(in.readLine());
+                nickname = decryptMessage(in.readLine());
                 System.out.println(nickname + " connected");
                 broadcast(nickname + " joined the chat!");
                 String message;
@@ -186,17 +196,33 @@ public class Server implements Runnable {
                     System.out.println(nickname + ": " + message);
                     System.out.println(nickname + ": " + clearMessage);
 
-                    if (clearMessage.startsWith("/nick ")) {
+                    if (clearMessage.startsWith("/nick")) {
                         String[] messageSplit = clearMessage.split(" ", 2);
-                        if (messageSplit.length == 2) {
+                        if (messageSplit.length >= 2) {
+                            String newNickname = stringArrayToString(messageSplit, 1, messageSplit.length);
+                            broadcast(nickname + " changed their nickname to " + newNickname);
+                            System.out.println(nickname + " changed their nickname to " + newNickname);
                             nickname = messageSplit[1];
-                            broadcast(nickname + " changed their nickname to " + nickname);
-                            System.out.println(nickname + " changed their nickname to " + nickname);
                             sendMessage("Nickname changed to " + nickname);
                         } else {
-                            sendMessage("Invalid nickname");
+                            sendMessage("Invalid command");
                         }
-                    } else if (clearMessage.equals("bye")) {
+                    } else if (clearMessage.startsWith("/mp")) {
+                        String[] messageSplit = clearMessage.split(" ");
+                        if (messageSplit.length >= 3) {
+                            String receiver = messageSplit[1];
+
+                            String msg = stringArrayToString(messageSplit, 2, messageSplit.length);
+                            for (ConnectionHandler connection : connections) {
+                                if (connection != null && connection != this && connection.nickname.equals(receiver)) {
+                                    connection.sendMessage(nickname + " (private): " + msg);
+                                    System.out.println(nickname + " (private): " + msg);
+                                }
+                            }
+                        } else {
+                            sendMessage("Invalid command");
+                        }
+                    } else if (clearMessage.equals("/bye")) {
                         shutdown();
                         broadcast(nickname + " left the chat");
                         System.out.println(nickname + " left the chat");

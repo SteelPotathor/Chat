@@ -26,6 +26,18 @@ public class Test {
                 .toArray(String[]::new);
     }
 
+    String stringArrayToString(String[] msg) {
+        // remove the first two elements
+
+        StringBuilder message = new StringBuilder();
+        for (int i = 0; i < msg.length; i++) {
+            message.append(msg[i]);
+        }
+        return message.toString();
+    }
+
+    // string array to string but remove the first two elements
+
     public static void main(String[] args) {
         Test t = new Test();
         // Mauvaise conversion
@@ -37,5 +49,6 @@ public class Test {
         System.out.println(Arrays.toString(t.convert(msg)));
         System.out.println(Arrays.toString(t.convert2("[4, 5, 6]")));
         System.out.println(Arrays.toString(t.convert3("[4, 5, 6]")));
+        System.out.println(t.stringArrayToString(msg));
     }
 }
