@@ -1,9 +1,8 @@
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
+import java.awt.event.*;
 
-public class ChatGUI extends JFrame {
+public class ChatGUI extends JFrame implements KeyListener, MouseListener {
     private JTextArea chatArea;
     private JTextField inputField;
 
@@ -18,20 +17,10 @@ public class ChatGUI extends JFrame {
         JScrollPane scrollPane = new JScrollPane(chatArea);
 
         inputField = new JTextField();
-        inputField.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                sendMessage();
-            }
-        });
+        inputField.addKeyListener(this);
 
         JButton sendButton = new JButton("Send");
-        sendButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                sendMessage();
-            }
-        });
+        sendButton.addMouseListener(this);
 
         JPanel inputPanel = new JPanel(new BorderLayout());
         inputPanel.add(inputField, BorderLayout.CENTER);
@@ -40,6 +29,7 @@ public class ChatGUI extends JFrame {
         getContentPane().setLayout(new BorderLayout());
         getContentPane().add(scrollPane, BorderLayout.CENTER);
         getContentPane().add(inputPanel, BorderLayout.SOUTH);
+        this.setVisible(true);
     }
 
     private void sendMessage() {
@@ -51,12 +41,53 @@ public class ChatGUI extends JFrame {
     }
 
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                new ChatGUI().setVisible(true);
-            }
-        });
+        new ChatGUI();
+    }
+
+    @Override
+    public void keyTyped(KeyEvent e) {
+
+    }
+
+    @Override
+    public void keyPressed(KeyEvent e) {
+
+    }
+
+    @Override
+    public void keyReleased(KeyEvent e) {
+        // Enter key
+        if ((e.getKeyCode() == KeyEvent.VK_ENTER)) {
+            sendMessage();
+        }
+    }
+
+    @Override
+    public void mouseClicked(MouseEvent e) {
+
+    }
+
+    @Override
+    public void mousePressed(MouseEvent e) {
+
+    }
+
+    @Override
+    public void mouseReleased(MouseEvent e) {
+        // Left click
+        if ((e.getButton() == MouseEvent.BUTTON1)) {
+            sendMessage();
+        }
+    }
+
+    @Override
+    public void mouseEntered(MouseEvent e) {
+
+    }
+
+    @Override
+    public void mouseExited(MouseEvent e) {
+
     }
 }
 

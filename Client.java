@@ -17,7 +17,6 @@ public class Client implements Runnable {
     private boolean done;
     private Key sessionKey;
 
-    // Does not work properly
     public void shutdown() {
         done = true;
         try {

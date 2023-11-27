@@ -129,7 +129,6 @@ public class Server implements Runnable {
             }
         }
 
-        // This method does not work properly further test must be done
         public void shutdown() {
             try {
                 in.close();
