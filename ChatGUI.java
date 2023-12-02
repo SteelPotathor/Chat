@@ -3,13 +3,16 @@ import java.awt.*;
 import java.awt.event.*;
 
 public class ChatGUI extends JFrame implements KeyListener, MouseListener {
-    private JTextArea chatArea;
-    private JTextField inputField;
+    public JTextArea chatArea;
+    private final JTextField inputField;
+    private final Client client;
 
-    public ChatGUI() {
+    public ChatGUI(Client client) {
         setTitle("Simple Chat");
         setSize(400, 300);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+        this.client = client;
 
         chatArea = new JTextArea();
         chatArea.setEditable(false);
@@ -35,13 +38,20 @@ public class ChatGUI extends JFrame implements KeyListener, MouseListener {
     private void sendMessage() {
         String message = inputField.getText();
         if (!message.trim().isEmpty()) {
-            chatArea.append("You: " + message + "\n");
             inputField.setText("");
+            client.inputHandler.sendMessage(message);
         }
     }
 
+    public void appendMessage(String msg) {
+        chatArea.append(msg);
+    }
+
     public static void main(String[] args) {
-        new ChatGUI();
+        Client client = new Client();
+        ChatGUI chatGUI = new ChatGUI(client);
+        client.setChatGUI(chatGUI);
+        client.run();
     }
 
     @Override

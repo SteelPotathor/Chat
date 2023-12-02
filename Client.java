@@ -7,6 +7,7 @@ import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.PublicKey;
 import java.util.Arrays;
+import java.util.Vector;
 
 public class Client implements Runnable {
 
@@ -16,6 +17,8 @@ public class Client implements Runnable {
 
     private boolean done;
     private Key sessionKey;
+    public InputHandler inputHandler;
+    private ChatGUI chatGUI;
 
     public void shutdown() {
         done = true;
@@ -44,6 +47,14 @@ public class Client implements Runnable {
             messageBytes[i] = Byte.parseByte(msg[i]);
         }
         return messageBytes;
+    }
+    public void setChatGUI(ChatGUI chatGUI) {
+        this.chatGUI = chatGUI;
+    }
+
+    public void sendMessageToGUI(String message) {
+        String msg = message + "\n";
+        chatGUI.appendMessage(msg);
     }
 
     @Override
@@ -79,7 +90,7 @@ public class Client implements Runnable {
             in = new BufferedReader(new InputStreamReader(client.getInputStream()));
             out = new PrintWriter(client.getOutputStream(), true);
 
-            InputHandler inputHandler = new InputHandler();
+            inputHandler = new InputHandler();
             Thread thread = new Thread(inputHandler);
             thread.start();
 
@@ -93,6 +104,9 @@ public class Client implements Runnable {
                 // Print in the console
                 System.out.println("Message crypté: " + inMessage);
                 System.out.println("Message décrypté: " + new String(cipherAES.doFinal(stringArrayToByteArray(stringToStringArray(inMessage)))));
+
+                sendMessageToGUI(new String(cipherAES.doFinal(stringArrayToByteArray(stringToStringArray(inMessage)))));
+                // System.out.println(messagesHistory.toString());
             }
         } catch (Exception e) {
             // System.out.println(e.getMessage());
