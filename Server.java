@@ -142,11 +142,11 @@ public class Server implements Runnable {
             }
         }
 
-        // Convert a string array to a string
+        // Convert a string array to a string (with the spaces)
         private String stringArrayToString(String[] msg, int start, int end) {
             StringBuilder message = new StringBuilder();
             for (int i = start; i < end; i++) {
-                message.append(msg[i]);
+                message.append(msg[i]).append(" ");
             }
             return message.toString();
         }
@@ -210,13 +210,21 @@ public class Server implements Runnable {
                         String[] messageSplit = clearMessage.split(" ");
                         if (messageSplit.length >= 3) {
                             String receiver = messageSplit[1];
-
+                            System.out.println(Arrays.toString(messageSplit));
                             String msg = stringArrayToString(messageSplit, 2, messageSplit.length);
+                            boolean userFound = false;
                             for (ConnectionHandler connection : connections) {
                                 if (connection != null && connection != this && connection.nickname.equals(receiver)) {
                                     connection.sendMessage(nickname + " (private): " + msg);
                                     System.out.println(nickname + " (private): " + msg);
+                                    userFound = true;
                                 }
+                            }
+                            if (!userFound) {
+                                this.sendMessage("User not found");
+                            }
+                            else {
+                                this.sendMessage("Private message sent to " + receiver);
                             }
                         } else {
                             sendMessage("Invalid command");
