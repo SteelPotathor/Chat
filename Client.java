@@ -7,7 +7,6 @@ import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.PublicKey;
 import java.util.Arrays;
-import java.util.Vector;
 
 public class Client implements Runnable {
 
@@ -18,7 +17,7 @@ public class Client implements Runnable {
     private boolean done;
     private Key sessionKey;
     public InputHandler inputHandler;
-    private ChatGUI chatGUI;
+    public ChatGUI chatGUI;
 
     public void shutdown() {
         done = true;
@@ -48,6 +47,7 @@ public class Client implements Runnable {
         }
         return messageBytes;
     }
+
     public void setChatGUI(ChatGUI chatGUI) {
         this.chatGUI = chatGUI;
     }
@@ -108,6 +108,7 @@ public class Client implements Runnable {
                 sendMessageToGUI(new String(cipherAES.doFinal(stringArrayToByteArray(stringToStringArray(inMessage)))));
                 // System.out.println(messagesHistory.toString());
             }
+            shutdown();
         } catch (Exception e) {
             // System.out.println(e.getMessage());
             System.out.println("Error running client");
@@ -150,7 +151,7 @@ public class Client implements Runnable {
 
                 while (!done) {
                     String message = inReader.readLine();
-                    if (message.equals("bye")) {
+                    if (message.equals("/bye")) {
                         sendMessage(message);
                         inReader.close();
                         shutdown();

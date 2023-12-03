@@ -131,8 +131,11 @@ public class Server implements Runnable {
 
         public void shutdown() {
             try {
+                System.out.println("ok");
                 in.close();
+                System.out.println("ok1");
                 out.close();
+                System.out.println("ok2");
                 if (!client.isClosed()) {
                     client.close();
                 }
@@ -222,8 +225,7 @@ public class Server implements Runnable {
                             }
                             if (!userFound) {
                                 this.sendMessage("User not found");
-                            }
-                            else {
+                            } else {
                                 this.sendMessage("Private message sent to " + receiver);
                             }
                         } else {
@@ -238,14 +240,10 @@ public class Server implements Runnable {
                     }
                 }
             } catch (Exception e) {
-                if (e.getMessage().equals("Stream closed")) {
-                    // Ignore
-                    // System.out.println("Client disconnected");
-                } else {
-                    // System.out.println(e.getMessage());
+                if (!e.getMessage().equals("Stream closed")) {
                     System.out.println("Error running connection handler");
+                    shutdown();
                 }
-                shutdown();
             }
         }
     }
