@@ -3,6 +3,7 @@ import javax.crypto.KeyGenerator;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
 import java.security.*;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -10,6 +11,9 @@ import java.util.Collections;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+/**
+ * A simple chat server
+ */
 public class Server implements Runnable {
 
     private final ArrayList<ConnectionHandler> connections;
@@ -45,7 +49,7 @@ public class Server implements Runnable {
     }
 
     /**
-     * Broadcast a message to all the clients
+     * Broadcast a message to all the clients (it will be encrypted with the session key of each client)
      *
      * @param message the message to broadcast
      */
@@ -125,6 +129,9 @@ public class Server implements Runnable {
         }
     }
 
+    /**
+     * A class to handle the connection with a client
+     */
     class ConnectionHandler implements Runnable {
 
         private final Socket client;
@@ -134,6 +141,12 @@ public class Server implements Runnable {
         private Cipher cipher;
         private String nickname;
 
+        /**
+         * Constructor
+         *
+         * @param client     the client socket
+         * @param sessionKey the session key
+         */
         public ConnectionHandler(Socket client, Key sessionKey) {
             this.client = client;
             this.sessionKey = sessionKey;
@@ -141,43 +154,20 @@ public class Server implements Runnable {
                 cipher = Cipher.getInstance("AES");
                 cipher.init(Cipher.DECRYPT_MODE, sessionKey);
             } catch (Exception e) {
-                // System.out.println(e.getMessage());
                 System.out.println("Error creating cipher");
                 shutdown();
             }
         }
 
-        public void sendMessage(String message) {
-            // Encrypt the message
-            try {
-                Cipher cipher = Cipher.getInstance("AES");
-                cipher.init(Cipher.ENCRYPT_MODE, sessionKey);
-                byte[] encryptedMessage = cipher.doFinal(message.getBytes());
-                // Send the message
-                out.println(Arrays.toString(encryptedMessage));
-                // System.out.println(Arrays.toString(encryptedMessage));
-            } catch (Exception e) {
-                System.out.println("Error encrypting message");
-            }
-        }
 
-        public void shutdown() {
-            try {
-                System.out.println("ok");
-                in.close();
-                System.out.println("ok1");
-                out.close();
-                System.out.println("ok2");
-                if (!client.isClosed()) {
-                    client.close();
-                }
-            } catch (IOException e) {
-                // System.out.println(e.getMessage());
-                System.out.println("Error closing connection");
-            }
-        }
-
-        // Convert a string array to a string (with the spaces)
+        /**
+         * Convert a string array to a string (with the spaces)
+         *
+         * @param msg   the string array
+         * @param start the start index
+         * @param end   the end index
+         * @return the string
+         */
         private String stringArrayToString(String[] msg, int start, int end) {
             StringBuilder message = new StringBuilder();
             for (int i = start; i < end; i++) {
@@ -186,13 +176,23 @@ public class Server implements Runnable {
             return message.toString();
         }
 
-        // Convert a String to a String array
+        /**
+         * Convert a string (which looks like this: [1, 2, 3, 4]) to a string array
+         *
+         * @param msg the string array
+         * @return the string
+         */
         public String[] stringToStringArray(String msg) {
             return Arrays.stream(msg.substring(1, msg.length() - 1).split(", "))
                     .toArray(String[]::new);
         }
 
-        // Convert a string array to a byte array (with the same values)
+        /**
+         * Convert a string array to a byte array (with the same values)
+         *
+         * @param msg the string array
+         * @return the byte array
+         */
         public byte[] stringArrayToByteArray(String[] msg) {
             byte[] messageBytes = new byte[msg.length];
             for (int i = 0; i < msg.length; i++) {
@@ -201,6 +201,31 @@ public class Server implements Runnable {
             return messageBytes;
         }
 
+        /**
+         * Send a message to the client (it will be encrypted with the session key)
+         *
+         * @param message the message to send
+         */
+        public void sendMessage(String message) {
+            try {
+                // Encrypt the message with the session key
+                Cipher cipher = Cipher.getInstance("AES");
+                cipher.init(Cipher.ENCRYPT_MODE, sessionKey);
+                byte[] encryptedMessage = cipher.doFinal(message.getBytes());
+
+                // Send the encrypted message
+                out.println(Arrays.toString(encryptedMessage));
+            } catch (Exception e) {
+                System.out.println("Error encrypting message");
+            }
+        }
+
+        /**
+         * Decrypt a message with the session key
+         *
+         * @param message the message to decrypt
+         * @return the decrypted message
+         */
         public String decryptMessage(String message) {
             try {
                 // Decrypt the message
@@ -211,17 +236,40 @@ public class Server implements Runnable {
             }
         }
 
+        /**
+         * Shutdown the client connection
+         */
+        public void shutdown() {
+            try {
+                in.close();
+                out.close();
+                if (!client.isClosed()) {
+                    client.close();
+                }
+            } catch (IOException e) {
+                System.out.println("Error closing connection with client");
+            }
+        }
+
         @Override
         public void run() {
             try {
+                // Create the input and output streams
                 out = new PrintWriter(client.getOutputStream(), true);
                 in = new BufferedReader(new InputStreamReader(client.getInputStream()));
+
+                // Ask the client for a nickname
                 sendMessage("Please enter a nickname: ");
 
+                // Receive the nickname from the client
                 nickname = decryptMessage(in.readLine());
                 System.out.println(nickname + " connected");
+
+                // Broadcast the nickname to the other clients
                 broadcast(nickname + " joined the chat!");
+
                 String message;
+                // Read from the client
                 while ((message = in.readLine()) != null) {
                     // Decrypt the message
                     String clearMessage = decryptMessage(message);
@@ -230,29 +278,36 @@ public class Server implements Runnable {
                     System.out.println(nickname + ": " + message);
                     System.out.println(nickname + ": " + clearMessage);
 
+                    // Commands
                     if (clearMessage.startsWith("/nick")) {
                         String[] messageSplit = clearMessage.split(" ", 2);
                         if (messageSplit.length >= 2) {
                             String newNickname = stringArrayToString(messageSplit, 1, messageSplit.length);
+
+                            // Broadcast the nickname change to the other clients
                             broadcast(nickname + " changed their nickname to " + newNickname);
                             System.out.println(nickname + " changed their nickname to " + newNickname);
+
+                            // Change the nickname
                             nickname = messageSplit[1];
+                            // Alert the client
                             sendMessage("Nickname changed to " + nickname);
                         } else {
-                            sendMessage("Invalid command");
+                            sendMessage("The nickname cannot be empty");
                         }
                     } else if (clearMessage.startsWith("/mp")) {
                         String[] messageSplit = clearMessage.split(" ");
                         if (messageSplit.length >= 3) {
                             String receiver = messageSplit[1];
-                            System.out.println(Arrays.toString(messageSplit));
                             String msg = stringArrayToString(messageSplit, 2, messageSplit.length);
                             boolean userFound = false;
                             for (ConnectionHandler connection : connections) {
                                 if (connection != null && connection != this && connection.nickname.equals(receiver)) {
+                                    // Send the private message to the receiver
                                     connection.sendMessage(nickname + " (private): " + msg);
                                     System.out.println(nickname + " (private): " + msg);
                                     userFound = true;
+                                    break;
                                 }
                             }
                             if (!userFound) {
@@ -261,18 +316,21 @@ public class Server implements Runnable {
                                 this.sendMessage("Private message sent to " + receiver);
                             }
                         } else {
-                            sendMessage("Invalid command");
+                            sendMessage("You must specify a receiver and a message");
                         }
                     } else if (clearMessage.equals("/bye")) {
-                        shutdown();
                         broadcast(nickname + " left the chat");
                         System.out.println(nickname + " left the chat");
+                        shutdown();
                     } else {
+                        // If the message is not a command, broadcast it to the other clients
                         broadcast(nickname + ": " + clearMessage);
                     }
                 }
-            } catch (Exception e) {
-                if (!e.getMessage().equals("Stream closed")) {
+            } catch (IOException e) {
+                if (e.getMessage().equals("Stream closed")) {
+                    System.out.println("Client disconnected");
+                } else {
                     System.out.println("Error running connection handler");
                     shutdown();
                 }
