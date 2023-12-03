@@ -3,12 +3,10 @@ import javax.crypto.KeyGenerator;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.security.Key;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.PublicKey;
+import java.security.*;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -18,12 +16,39 @@ public class Server implements Runnable {
     private ServerSocket server;
     private boolean done;
     private ExecutorService pool;
+    private KeyPair serverKeyPair;
 
+    /**
+     * Constructor
+     */
     public Server() {
         connections = new ArrayList<>();
         done = false;
+        try {
+            // Create a server socket on port 9999
+            server = new ServerSocket(9999);
+
+            // Create a keyPair for the server using RSA
+            serverKeyPair = KeyPairGenerator.getInstance("RSA").generateKeyPair();
+        } catch (IOException e) {
+            System.out.println("Error creating server socket");
+            shutdown();
+        } catch (NoSuchAlgorithmException e) {
+            System.out.println("Error creating key pair");
+            shutdown();
+        }
+
+        // Create a thread pool to handle the connections with the clients
+        pool = Executors.newCachedThreadPool();
+        System.out.println("Server started");
+        System.out.println("Waiting for clients...");
     }
 
+    /**
+     * Broadcast a message to all the clients
+     *
+     * @param message the message to broadcast
+     */
     public void broadcast(String message) {
         for (ConnectionHandler connection : connections) {
             if (connection != null) {
@@ -32,35 +57,41 @@ public class Server implements Runnable {
         }
     }
 
+    /**
+     * Shutdown the server and close all the connections with the clients
+     */
     public void shutdown() {
-        try {
-            done = true;
+        done = true;
+        if (pool != null) {
             pool.shutdown();
-            if (!server.isClosed()) {
+        }
+        // Close all the connections
+        for (ConnectionHandler connection : connections) {
+            if (connection != null) {
+                connection.sendMessage("Server shutting down");
+                connection.shutdown();
+            }
+        }
+        try {
+            if (server != null && !server.isClosed()) {
                 server.close();
             }
-            for (ConnectionHandler connection : connections) {
-                if (connection != null) {
-                    connection.sendMessage("Server shutting down");
-                    connection.shutdown();
-                }
-            }
         } catch (IOException e) {
-            // System.out.println(e.getMessage());
             System.out.println("Error shutting down server");
         }
     }
 
+    /**
+     * Run the server
+     */
     @Override
     public void run() {
-        try {
-            server = new ServerSocket(9999);
-            // Create a keyPair
-            KeyPair serverKeyPair = KeyPairGenerator.getInstance("RSA").generateKeyPair();
-            //System.out.println("Server public key: " + serverKeyPair.getPublic());
-            pool = Executors.newCachedThreadPool();
-            while (!done) {
+        // Wait for clients to connect
+        while (!done) {
+            try {
+                // Accept a client
                 Socket client = server.accept();
+
                 // Send the public key to the client
                 ObjectOutputStream objectOutputStream = new ObjectOutputStream(client.getOutputStream());
                 objectOutputStream.writeObject(serverKeyPair.getPublic());
@@ -69,11 +100,13 @@ public class Server implements Runnable {
                 // Receive the public key from the client
                 ObjectInputStream objectInputStream = new ObjectInputStream(client.getInputStream());
                 PublicKey clientPublicKey = (PublicKey) objectInputStream.readObject();
-                //System.out.println("Client connected" + clientPublicKey);
+                // System.out.println("Client connected" + clientPublicKey);
 
-                // Crypt the session key with the client's public key
+                // Create a session key using AES
                 Key sessionKey = KeyGenerator.getInstance("AES").generateKey();
                 //System.out.println("Session key: " + sessionKey);
+
+                // Encrypt the session key using the client's public key
                 Cipher cipher = Cipher.getInstance("RSA");
                 cipher.init(Cipher.ENCRYPT_MODE, clientPublicKey);
                 byte[] encryptedSessionKey = cipher.doFinal(sessionKey.getEncoded());
@@ -82,14 +115,13 @@ public class Server implements Runnable {
                 objectOutputStream.writeObject(encryptedSessionKey);
                 objectOutputStream.flush();
 
+                // Create a connection handler for the client (with the session key) and add it to the thread pool (it will run in a separate thread)
                 ConnectionHandler handler = new ConnectionHandler(client, sessionKey);
                 connections.add(handler);
                 pool.execute(handler);
+            } catch (Exception e) {
+                System.out.println("Error accepting client");
             }
-        } catch (Exception e) {
-            // System.out.println(e.getMessage());
-            System.out.println("Error running server");
-            shutdown();
         }
     }
 
