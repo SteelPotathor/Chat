@@ -269,7 +269,7 @@ public class Server implements Runnable {
                 broadcast(nickname + " joined the chat!");
 
                 String message;
-                // Read from the client
+                // Read from the client until the connection is closed
                 while ((message = in.readLine()) != null) {
                     // Decrypt the message
                     String clearMessage = decryptMessage(message);
@@ -298,8 +298,10 @@ public class Server implements Runnable {
                     } else if (clearMessage.startsWith("/mp")) {
                         String[] messageSplit = clearMessage.split(" ");
                         if (messageSplit.length >= 3) {
+                            // Get the receiver and the message
                             String receiver = messageSplit[1];
                             String msg = stringArrayToString(messageSplit, 2, messageSplit.length);
+
                             boolean userFound = false;
                             for (ConnectionHandler connection : connections) {
                                 if (connection != null && connection != this && connection.nickname.equals(receiver)) {
@@ -307,7 +309,6 @@ public class Server implements Runnable {
                                     connection.sendMessage(nickname + " (private): " + msg);
                                     System.out.println(nickname + " (private): " + msg);
                                     userFound = true;
-                                    break;
                                 }
                             }
                             if (!userFound) {
@@ -319,8 +320,11 @@ public class Server implements Runnable {
                             sendMessage("You must specify a receiver and a message");
                         }
                     } else if (clearMessage.equals("/bye")) {
+                        // Broadcast the disconnection to the other clients
                         broadcast(nickname + " left the chat");
                         System.out.println(nickname + " left the chat");
+
+                        // Shutdown the connection
                         shutdown();
                     } else {
                         // If the message is not a command, broadcast it to the other clients
