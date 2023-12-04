@@ -3,11 +3,9 @@ import javax.crypto.KeyGenerator;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.SocketException;
 import java.security.*;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -104,11 +102,9 @@ public class Server implements Runnable {
                 // Receive the public key from the client
                 ObjectInputStream objectInputStream = new ObjectInputStream(client.getInputStream());
                 PublicKey clientPublicKey = (PublicKey) objectInputStream.readObject();
-                // System.out.println("Client connected" + clientPublicKey);
 
                 // Create a session key using AES
                 Key sessionKey = KeyGenerator.getInstance("AES").generateKey();
-                //System.out.println("Session key: " + sessionKey);
 
                 // Encrypt the session key using the client's public key
                 Cipher cipher = Cipher.getInstance("RSA");
@@ -251,6 +247,9 @@ public class Server implements Runnable {
             }
         }
 
+        /**
+         * Run the connection handler
+         */
         @Override
         public void run() {
             try {

@@ -50,7 +50,7 @@ public class ChatGUI extends JFrame implements KeyListener, MouseListener {
     }
 
     public static void main(String[] args) {
-        Client client = new Client();
+        Client client = new Client(9999);
         ChatGUI chatGUI = new ChatGUI(client);
         client.setChatGUI(chatGUI);
         client.run();

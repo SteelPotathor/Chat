@@ -2,10 +2,7 @@ import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.*;
 import java.net.Socket;
-import java.security.Key;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.PublicKey;
+import java.security.*;
 import java.util.Arrays;
 
 public class Client implements Runnable {
@@ -13,33 +10,78 @@ public class Client implements Runnable {
     private Socket client;
     private BufferedReader in;
     private PrintWriter out;
-
     private boolean done;
+    private KeyPair keyPair;
     private Key sessionKey;
     public InputHandler inputHandler;
     public ChatGUI chatGUI;
 
+
+    /**
+     * Create a client
+     *
+     * @param port the port
+     */
+    public Client(int port) {
+        done = false;
+        try {
+            // Connect to the server
+            client = new Socket("localhost", port);
+
+            // Create a keyPair
+            keyPair = KeyPairGenerator.getInstance("RSA").generateKeyPair();
+
+            // Create the input and output streams
+            in = new BufferedReader(new InputStreamReader(client.getInputStream()));
+            out = new PrintWriter(client.getOutputStream(), true);
+        } catch (IOException e) {
+            System.out.println("Error connecting to server");
+            shutdown();
+        } catch (NoSuchAlgorithmException e) {
+            System.out.println("Error generating keyPair");
+            shutdown();
+        }
+    }
+
+    /**
+     * Shutdown the client
+     */
     public void shutdown() {
+        System.out.println("Shutting down client");
         done = true;
         try {
-            in.close();
-            out.close();
-            if (!client.isClosed()) {
+            if (in != null) {
+                in.close();
+            }
+            if (out != null) {
+                out.close();
+            }
+            if (client != null && !client.isClosed()) {
                 client.close();
             }
-        } catch (IOException e) {
-            // System.out.println(e.getMessage());
+            System.exit(0);
+        } catch (Exception e) {
             System.out.println("Error shutting down client");
         }
     }
 
-    // Convert a String to a String array
+    /**
+     * Convert a string (which looks like this: [1, 2, 3, 4]) to a string array
+     *
+     * @param msg the string array
+     * @return the string
+     */
     public String[] stringToStringArray(String msg) {
         return Arrays.stream(msg.substring(1, msg.length() - 1).split(", "))
                 .toArray(String[]::new);
     }
 
-    // Convert a string array to a byte array (with the same values)
+    /**
+     * Convert a string array to a byte array (with the same values)
+     *
+     * @param msg the string array
+     * @return the byte array
+     */
     public byte[] stringArrayToByteArray(String[] msg) {
         byte[] messageBytes = new byte[msg.length];
         for (int i = 0; i < msg.length; i++) {
@@ -48,32 +90,39 @@ public class Client implements Runnable {
         return messageBytes;
     }
 
+    /**
+     * Set the chatGUI
+     *
+     * @param chatGUI the chatGUI
+     */
     public void setChatGUI(ChatGUI chatGUI) {
         this.chatGUI = chatGUI;
     }
 
+    /**
+     * Send a message to the GUI (append it to the chat area)
+     *
+     * @param message the message
+     */
     public void sendMessageToGUI(String message) {
         String msg = message + "\n";
         chatGUI.appendMessage(msg);
     }
 
+    /**
+     * Run the client
+     */
     @Override
     public void run() {
         try {
-            client = new Socket("localhost", 9999);
-            // Create a keyPair
-            KeyPair keyPair = KeyPairGenerator.getInstance("RSA").generateKeyPair();
-
             // Send public key to server
             ObjectOutputStream objectOutputStream = new ObjectOutputStream(client.getOutputStream());
             objectOutputStream.writeObject(keyPair.getPublic());
             objectOutputStream.flush();
-            //System.out.println(keyPair.getPublic());
 
             // Receive public key from server
             ObjectInputStream objectInputStream = new ObjectInputStream(client.getInputStream());
             PublicKey serverPublicKey = (PublicKey) objectInputStream.readObject();
-            //System.out.println(serverPublicKey);
 
             // Receive the session key from the server
             byte[] encryptedSessionKey = (byte[]) objectInputStream.readObject();
@@ -87,10 +136,10 @@ public class Client implements Runnable {
             sessionKey = new SecretKeySpec(sessionKeyBytes, 0, sessionKeyBytes.length, "AES");
             System.out.println("Session key: " + sessionKey);
 
-            in = new BufferedReader(new InputStreamReader(client.getInputStream()));
-            out = new PrintWriter(client.getOutputStream(), true);
-
+            // Create an input handler
             inputHandler = new InputHandler();
+
+            // Start the input handler thread
             Thread thread = new Thread(inputHandler);
             thread.start();
 
@@ -101,16 +150,16 @@ public class Client implements Runnable {
                 Cipher cipherAES = Cipher.getInstance("AES");
                 cipherAES.init(Cipher.DECRYPT_MODE, sessionKey);
 
+                String decryptedMessage = new String(cipherAES.doFinal(stringArrayToByteArray(stringToStringArray(inMessage))));
                 // Print in the console
                 System.out.println("Message crypté: " + inMessage);
-                System.out.println("Message décrypté: " + new String(cipherAES.doFinal(stringArrayToByteArray(stringToStringArray(inMessage)))));
+                System.out.println("Message décrypté: " + decryptedMessage);
 
-                sendMessageToGUI(new String(cipherAES.doFinal(stringArrayToByteArray(stringToStringArray(inMessage)))));
-                // System.out.println(messagesHistory.toString());
+                sendMessageToGUI(decryptedMessage);
             }
+            // Close the client if the server is down
             shutdown();
         } catch (Exception e) {
-            // System.out.println(e.getMessage());
             System.out.println("Error running client");
             shutdown();
         }
@@ -120,6 +169,9 @@ public class Client implements Runnable {
 
         private Cipher cipher;
 
+        /**
+         * Constructor for the input handler
+         */
         public InputHandler() {
             try {
                 cipher = Cipher.getInstance("AES");
@@ -130,6 +182,11 @@ public class Client implements Runnable {
             }
         }
 
+        /**
+         * Send a message to the server (encrypted with the session key)
+         *
+         * @param message the message
+         */
         public void sendMessage(String message) {
             try {
                 // Encrypt the message with the session key
@@ -143,6 +200,9 @@ public class Client implements Runnable {
             }
         }
 
+        /**
+         * Run the input handler
+         */
         @Override
         public void run() {
             try {
@@ -151,30 +211,18 @@ public class Client implements Runnable {
 
                 while (!done) {
                     String message = inReader.readLine();
+
+                    // Send the message to the server (encrypted with the session key)
+                    sendMessage(message);
                     if (message.equals("/bye")) {
-                        sendMessage(message);
                         inReader.close();
                         shutdown();
-                    } else {
-                        // Encrypt the message with the session key
-                        sendMessage(message);
-
-                        /* Useful for debugging
-                        System.out.println(Arrays.toString(encryptedMessage));
-                        System.out.println(message);
-                        */
                     }
                 }
             } catch (Exception e) {
-                // System.out.println(e.getMessage());
                 System.out.println("Error reading from console");
                 shutdown();
             }
         }
-    }
-
-    public static void main(String[] args) {
-        Client client = new Client();
-        client.run();
     }
 }
