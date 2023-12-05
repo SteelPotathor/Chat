@@ -120,9 +120,8 @@ public class Client implements Runnable {
             objectOutputStream.writeObject(keyPair.getPublic());
             objectOutputStream.flush();
 
-            // Receive public key from server
+            // Create an object input stream
             ObjectInputStream objectInputStream = new ObjectInputStream(client.getInputStream());
-            PublicKey serverPublicKey = (PublicKey) objectInputStream.readObject();
 
             // Receive the session key from the server
             byte[] encryptedSessionKey = (byte[]) objectInputStream.readObject();

@@ -94,10 +94,8 @@ public class Server implements Runnable {
                 // Accept a client
                 Socket client = server.accept();
 
-                // Send the public key to the client
+                // Create the output stream
                 ObjectOutputStream objectOutputStream = new ObjectOutputStream(client.getOutputStream());
-                objectOutputStream.writeObject(serverKeyPair.getPublic());
-                objectOutputStream.flush();
 
                 // Receive the public key from the client
                 ObjectInputStream objectInputStream = new ObjectInputStream(client.getInputStream());

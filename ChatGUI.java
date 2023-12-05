@@ -7,7 +7,13 @@ public class ChatGUI extends JFrame implements KeyListener, MouseListener {
     private final JTextField inputField;
     private final Client client;
 
+    /**
+     * Create a chat GUI
+     *
+     * @param client the client
+     */
     public ChatGUI(Client client) {
+        // Create the GUI
         setTitle("Simple Chat");
         setSize(400, 300);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -35,16 +41,26 @@ public class ChatGUI extends JFrame implements KeyListener, MouseListener {
         this.setVisible(true);
     }
 
-    // Send a message to the server
+    /**
+     * Send a message (called when the user presses enter or clicks the send button)
+     */
     private void sendMessage() {
         String message = inputField.getText();
+        // Don't send empty messages
         if (!message.trim().isEmpty()) {
+            // Reset the input field
             inputField.setText("");
+
+            // Send the message to the server
             client.inputHandler.sendMessage(message);
         }
     }
 
-    // Append a message to the chat area
+    /**
+     * Append a message to the chat area
+     *
+     * @param msg the message
+     */
     public void appendMessage(String msg) {
         chatArea.append(msg);
     }
