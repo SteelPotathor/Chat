@@ -22,12 +22,12 @@ public class Server implements Runnable {
     /**
      * Constructor
      */
-    public Server() {
+    public Server(int port) {
         connections = new ArrayList<>();
         done = false;
         try {
-            // Create a server socket on port 9999
-            server = new ServerSocket(9999);
+            // Create a server socket on port: port
+            server = new ServerSocket(port);
         } catch (IOException e) {
             System.out.println("Error creating server socket");
             shutdown();
@@ -333,7 +333,7 @@ public class Server implements Runnable {
     }
 
     public static void main(String[] args) {
-        Server server = new Server();
+        Server server = new Server(9999);
         server.run();
     }
 }
