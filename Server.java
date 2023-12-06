@@ -53,6 +53,20 @@ public class Server implements Runnable {
     }
 
     /**
+     * Broadcast a message to all the clients except one (it will be encrypted with the session key of each client)
+     *
+     * @param message the message to broadcast
+     * @param exclude the client to exclude
+     */
+    public void broadcast(String message, ConnectionHandler exclude) {
+        for (ConnectionHandler connection : connections) {
+            if (connection != null && connection != exclude) {
+                connection.sendMessage(message);
+            }
+        }
+    }
+
+    /**
      * Shutdown the server and close all the connections with the clients
      */
     public void shutdown() {
@@ -227,9 +241,15 @@ public class Server implements Runnable {
          * Shutdown the client connection
          */
         public void shutdown() {
+            // Remove the connection handler from the list of connections
+            connections.remove(this);
+
             try {
+                // Close the input and output streams
                 in.close();
                 out.close();
+
+                // Close the client socket
                 if (!client.isClosed()) {
                     client.close();
                 }
@@ -252,7 +272,9 @@ public class Server implements Runnable {
                 sendMessage("Please enter a nickname: ");
 
                 // Receive the nickname from the client
-                nickname = decryptMessage(in.readLine());
+                String nickCrypt = in.readLine();
+                nickname = decryptMessage(nickCrypt);
+                System.out.println(nickCrypt + " connected");
                 System.out.println(nickname + " connected");
 
                 // Broadcast the nickname to the other clients
@@ -267,6 +289,7 @@ public class Server implements Runnable {
                     // Console of the server
                     System.out.println(nickname + ": " + message);
                     System.out.println(nickname + ": " + clearMessage);
+                    System.out.println();
 
                     // Commands
                     if (clearMessage.startsWith("/nick")) {
@@ -274,8 +297,8 @@ public class Server implements Runnable {
                         if (messageSplit.length >= 2) {
                             String newNickname = stringArrayToString(messageSplit, 1, messageSplit.length);
 
-                            // Broadcast the nickname change to the other clients
-                            broadcast(nickname + " changed their nickname to " + newNickname);
+                            // Broadcast the nickname change to the other clients (except the client that changed the nickname)
+                            broadcast(nickname + " changed their nickname to " + newNickname, this);
                             System.out.println(nickname + " changed their nickname to " + newNickname);
 
                             // Change the nickname
@@ -312,7 +335,7 @@ public class Server implements Runnable {
                     } else if (clearMessage.equals("/bye")) {
                         // Broadcast the disconnection to the other clients
                         broadcast(nickname + " left the chat");
-                        System.out.println(nickname + " left the chat");
+                        System.out.println(nickname + " left the chat (/bye)");
 
                         // Shutdown the connection
                         shutdown();
@@ -322,9 +345,18 @@ public class Server implements Runnable {
                     }
                 }
             } catch (IOException e) {
+                // User disconnected (e.g. /bye)
                 if (e.getMessage().equals("Stream closed")) {
-                    System.out.println("Client disconnected");
-                } else {
+                    // Ignore
+                }
+                // User disconnected (e.g. close window)
+                else if (e.getMessage().equals("Connection reset")) {
+                    System.out.println(nickname + " disconnected (close window)");
+                    broadcast(nickname + " has been disconnected (closed the window)");
+                    shutdown();
+                }
+                // User disconnected (e.g. error)
+                else {
                     System.out.println("Error running connection handler");
                     shutdown();
                 }
