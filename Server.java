@@ -18,7 +18,6 @@ public class Server implements Runnable {
     private ServerSocket server;
     private boolean done;
     private ExecutorService pool;
-    private KeyPair serverKeyPair;
 
     /**
      * Constructor
@@ -29,14 +28,8 @@ public class Server implements Runnable {
         try {
             // Create a server socket on port 9999
             server = new ServerSocket(9999);
-
-            // Create a keyPair for the server using RSA
-            serverKeyPair = KeyPairGenerator.getInstance("RSA").generateKeyPair();
         } catch (IOException e) {
             System.out.println("Error creating server socket");
-            shutdown();
-        } catch (NoSuchAlgorithmException e) {
-            System.out.println("Error creating key pair");
             shutdown();
         }
 

@@ -62,15 +62,18 @@ public class ChatGUI extends JFrame implements KeyListener, MouseListener {
      * @param msg the message
      */
     public void appendMessage(String msg) {
-        chatArea.append(msg);
+        // Append the message to the chat area (ensure thread safety)
+        SwingUtilities.invokeLater(() -> chatArea.append(msg));
     }
 
     public static void main(String[] args) {
-        Client client = new Client(9999);
-        ChatGUI chatGUI = new ChatGUI(client);
-        client.setChatGUI(chatGUI);
-        client.run();
-        System.exit(0);
+        SwingUtilities.invokeLater(() -> {
+            Client client = new Client(9999);
+            ChatGUI chatGUI = new ChatGUI(client);
+            client.setChatGUI(chatGUI);
+            new Thread(client).start();
+        });
+
     }
 
     @Override
