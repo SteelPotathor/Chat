@@ -6,6 +6,7 @@ import java.net.Socket;
 import java.security.*;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Vector;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -14,7 +15,7 @@ import java.util.concurrent.Executors;
  */
 public class Server implements Runnable {
 
-    private final ArrayList<ConnectionHandler> connections;
+    private final Vector<ConnectionHandler> connections;
     private ServerSocket server;
     private boolean done;
     private ExecutorService pool;
@@ -23,7 +24,7 @@ public class Server implements Runnable {
      * Constructor
      */
     public Server(int port) {
-        connections = new ArrayList<>();
+        connections = new Vector<>();
         done = false;
         try {
             // Create a server socket on port: port
@@ -289,7 +290,6 @@ public class Server implements Runnable {
                     // Console of the server
                     System.out.println(nickname + ": " + message);
                     System.out.println(nickname + ": " + clearMessage);
-                    System.out.println();
 
                     // Commands
                     if (clearMessage.startsWith("/nick")) {
